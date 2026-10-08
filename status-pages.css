@@ -1,0 +1,33 @@
+/* LogIn v6.1.25 — offline Bootstrap-inspired status pages. No CDN, no JS dependency. */
+:root{color-scheme:light;--accent:#4f46e5;--accent-hover:#4338ca;--ink:#171823;--muted:#697181;--border:#e6e8ef;--surface:#fff;--bg:#fbfbfd;--subtle:#f6f7fb;--ring:#e5e3ff;--radius:16px}
+*,*::before,*::after{box-sizing:border-box}
+html,body{min-height:100%;margin:0}
+body{font-family:Inter,ui-sans-serif,-apple-system,BlinkMacSystemFont,"Segoe UI",Arial,sans-serif;color:var(--ink);background:var(--bg);min-height:100svh;display:flex;flex-direction:column;-webkit-font-smoothing:antialiased}
+body::before{content:"";position:fixed;left:0;right:0;top:0;height:3px;background:linear-gradient(90deg,#da37e7 0%,#7c32fa 48%,#2a67ff 100%);z-index:0}
+.stage{flex:1;width:100%;display:flex;justify-content:center;align-items:center;padding:50px 18px 48px;z-index:1}
+.status-panel{width:min(440px,100%);margin:auto;text-align:center}
+.logo-wrap{width:82px;height:82px;margin:0 auto 26px;display:grid;place-items:center}
+.logo-wrap img{display:block;width:82px;height:82px;object-fit:contain;filter:drop-shadow(0 7px 13px rgba(58,42,121,.09))}
+.eyebrow{font-size:11px;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:#6b64c0;margin-bottom:11px}
+h1{font-size:clamp(26px,5vw,32px);font-weight:720;letter-spacing:-.045em;line-height:1.2;margin:0 0 12px}
+.description{font-size:15px;color:var(--muted);line-height:1.65;max-width:410px;margin:0 auto}
+.actions{display:flex;flex-direction:column;align-items:stretch;gap:10px;width:min(344px,100%);margin:28px auto 0}
+.btn{appearance:none;display:inline-flex;align-items:center;justify-content:center;gap:9px;min-height:46px;padding:11px 20px;border-radius:12px;border:1px solid transparent;font-family:inherit;font-weight:600;font-size:14px;line-height:1.2;white-space:normal;text-decoration:none;cursor:pointer;transition:background .16s ease,box-shadow .16s ease,transform .12s ease;color:#fff;background:var(--accent)}
+.btn:focus-visible{outline:none;box-shadow:0 0 0 4px var(--ring)}
+.btn:active:not(:disabled){transform:translateY(1px)}
+.btn-primary{background:var(--accent);color:#fff;box-shadow:0 3px 10px rgba(79,70,229,.12)}
+.btn-primary:hover:not(:disabled){background:var(--accent-hover)}
+.btn-secondary{background:#2563eb;border-color:#2563eb;color:#fff}
+.btn-secondary:hover:not(:disabled){background:#1d4ed8;border-color:#1d4ed8}
+.btn:disabled{opacity:.72;cursor:wait}
+.support{font-size:13px;line-height:1.4;color:#737a8a;margin:16px auto 0;min-height:19px}
+.btn-contact{background:#7c3aed;border-color:#7c3aed;color:#fff;cursor:default!important;opacity:1!important}
+.btn-phone{background:#16a34a;border-color:#16a34a;color:#fff}
+.btn-phone:hover{background:#15803d;border-color:#15803d}
+.btn-contact:disabled{cursor:default;opacity:1}
+#recovery-contact:not([hidden]){display:flex;flex-direction:column;width:100%}
+.info-note{font-size:12px;color:#818898;margin:19px auto 0;line-height:1.5;max-width:370px}
+.footer{font-size:12px;color:#9a9eaa;text-align:center;padding:0 20px 24px;z-index:1}
+[hidden]{display:none!important}
+@media(max-width:480px){.stage{padding:38px 21px 26px}.logo-wrap{margin-bottom:21px}.status-panel{max-width:370px}.footer{padding-bottom:19px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{transition:none!important;animation:none!important}}

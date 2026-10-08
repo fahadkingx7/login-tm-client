@@ -1,0 +1,286 @@
+<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>LogIn</title><link rel="stylesheet" href="popup.css"><style id="veefivee-footer-visibility">.veefivee-footer{
+  position:fixed!important;left:0!important;right:0!important;bottom:0!important;
+  margin:0!important;padding:13px 20px 14px!important;z-index:99999!important;
+  background:rgba(245,245,247,.9)!important;
+  backdrop-filter:saturate(180%) blur(16px)!important;
+  -webkit-backdrop-filter:saturate(180%) blur(16px)!important;
+  border-top:1px solid rgba(0,0,0,.06)!important;
+  box-shadow:none!important;
+  color:#6e6e73!important;
+  font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",system-ui,sans-serif!important;
+  font-size:12px!important;font-weight:500!important;letter-spacing:0!important;
+}
+.veefivee-footer a{color:var(--accent,#0071e3)!important;font-weight:600!important;text-decoration:none!important}
+.veefivee-footer a:hover{text-decoration:underline!important}</style><style>
+/* TrucksMate top brand banner */
+.trucksmate-top-banner{
+  box-sizing:border-box;
+  width:100%;
+  height:48px;
+  margin:0;
+  padding:8px 20px;
+  display:flex;
+  align-items:center;
+  justify-content:center;
+  background:rgba(255,255,255,.98);
+  border-bottom:1px solid #e5e7ef;
+  box-shadow:0 6px 18px rgba(15,23,42,.045);
+  flex:0 0 48px;
+}
+.trucksmate-top-banner img{
+  display:block;
+  width:auto;
+  height:31px;
+  max-width:220px;
+  object-fit:contain;
+}
+</style>
+
+
+
+
+<style>
+/* TrucksMate supplied logo — larger branding */
+.trucksmate-top-banner{
+  height:64px;
+  padding:10px 24px;
+  flex:0 0 64px;
+}
+.trucksmate-top-banner img{
+  display:block;
+  width:auto;
+  height:44px;
+  max-width:330px;
+  object-fit:contain;
+}
+
+
+</style>
+
+<style id="trucksmate-banner">
+.trucksmate-top-banner{
+  box-sizing:border-box;width:100%;height:56px;margin:0;padding:10px 20px;
+  display:flex;align-items:center;justify-content:center;
+  background:rgba(255,255,255,.92);
+  backdrop-filter:saturate(180%) blur(16px);
+  -webkit-backdrop-filter:saturate(180%) blur(16px);
+  border-bottom:1px solid rgba(0,0,0,.06);
+  box-shadow:none;flex:0 0 56px;position:sticky;top:0;z-index:40;
+}
+.trucksmate-top-banner img{display:block;width:auto;height:30px;max-width:230px;object-fit:contain}
+</style>
+<style id="gradient-logo-theme">
+.gradient-text{
+  background:linear-gradient(100deg,#6845f5,#9a67ff);
+  -webkit-background-clip:text;
+  background-clip:text;
+  color:transparent;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif!important;
+  font-weight:800!important;
+  letter-spacing:-.045em!important;
+}
+ .login-brand-mark{
+  display:grid!important;place-items:center!important;
+  width:47px!important;height:47px!important;margin:2px auto 14px!important;
+  border-radius:13px!important;background:#0071e3!important;
+  color:#fff!important;-webkit-text-fill-color:#fff!important;
+  font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",system-ui,sans-serif!important;
+  font-size:31px!important;font-weight:800!important;line-height:1.1!important;
+  box-shadow:0 6px 16px rgba(104,69,245,.20)!important;
+}
+.login-logo-text{display:block!important;text-align:center!important;font-size:30px!important;line-height:1.05!important;margin:2px 0 14px!important;}
+.topbar{width:100vw!important;max-width:none!important;justify-content:center!important;}
+.topbar .brand{width:100%!important;justify-content:center!important;}
+.topbar-login-logo{font-size:20px!important;margin:0!important;}
+.app-header{width:100vw!important;max-width:none!important;display:grid!important;grid-template-columns:1fr auto 1fr!important;align-items:center!important;}
+.app-header .brand{grid-column:2;justify-content:center!important;}
+.app-header .admin-signout{grid-column:3;justify-self:end!important;}
+.app-header .topbar-login-logo{font-size:20px!important;}
+</style>
+
+
+
+
+<style id="connectivity-warning-theme-refined">
+/* Softer Apple-style connectivity state */
+.connectivity-card{
+  border-color:rgba(215,0,21,.10)!important;
+  box-shadow:0 8px 30px rgba(0,0,0,.035)!important;
+}
+.connectivity-icon{
+  width:56px!important;height:56px!important;margin:0 auto 8px!important;
+  border-radius:16px!important;display:grid!important;place-items:center!important;
+  background:#fff5f3!important;color:#b54740!important;
+  font-size:25px!important;font-weight:700!important;line-height:1!important;
+}
+.connectivity-eyebrow{color:#b54740!important;}
+.connectivity-card h1{
+  color:var(--text,#1d1d1f)!important;
+  margin-top:8px!important;
+}
+.connectivity-card p{
+  margin-bottom:18px!important;
+  color:var(--muted,#6e6e73)!important;
+}
+#checkAgainConnectivity{
+  margin-top:2px!important;
+  background:#0071e3!important;
+  border-color:#0071e3!important;
+  color:#fff!important;
+  min-height:44px!important;
+}
+#checkAgainConnectivity:hover:not(:disabled){background:#0077ed!important;border-color:#0077ed!important;}
+#checkAgainConnectivity:disabled{opacity:.78!important;cursor:default!important;}
+#checkAgainConnectivity.connectivity-checking{gap:8px!important;}
+</style>
+<style id="edge-to-edge-apple-reference">
+/* Match the supplied Apple theme: the header is full-width inside the popup, not viewport-width. */
+html,body{overflow-x:hidden!important;}
+.topbar,.app-header,.trucksmate-top-banner{
+  width:100%!important;
+  max-width:none!important;
+  min-width:0!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  align-self:stretch!important;
+  box-sizing:border-box!important;
+}
+#app{width:100%!important;max-width:none!important;margin-left:0!important;margin-right:0!important;}
+</style>
+
+<style id="connectivity-warning-final">
+.connectivity-card{
+  border-color:rgba(215,0,21,.10)!important;
+  box-shadow:0 1px 1px rgba(0,0,0,.03)!important;
+}
+.connectivity-card .connectivity-icon,.connectivity-card .connectivity-eyebrow{display:none!important;}
+.connectivity-error-title{
+  margin:0 0 8px!important;
+  color:#d70015!important;
+  font-size:20px!important;
+  line-height:1.18!important;
+  font-weight:650!important;
+  letter-spacing:-.022em!important;
+}
+.connectivity-card p{
+  margin:0 0 18px!important;
+  color:#6e6e73!important;
+  font-size:13px!important;
+  line-height:1.5!important;
+}
+#checkAgainConnectivity{
+  margin-top:0!important;
+  min-height:44px!important;
+  background:#0071e3!important;
+  border-color:#0071e3!important;
+  color:#fff!important;
+}
+#checkAgainConnectivity:hover:not(:disabled){background:#0077ed!important;border-color:#0077ed!important;}
+#checkAgainConnectivity.connectivity-checking{opacity:.82!important;cursor:default!important;}
+</style>
+
+<style id="apple-full-width-header-final">
+html,body{overflow-x:hidden!important;}
+html:has(#app:not(.hidden)),body:has(#app:not(.hidden)){scrollbar-width:none!important;}
+html:has(#app:not(.hidden))::-webkit-scrollbar,
+body:has(#app:not(.hidden))::-webkit-scrollbar{width:0!important;height:0!important;display:none!important;}
+#app{width:100%!important;max-width:none!important;margin:0!important;padding-left:0!important;padding-right:0!important;}
+.topbar,.app-header,.trucksmate-top-banner{
+  display:flex!important;
+  box-sizing:border-box!important;
+  width:100%!important;
+  min-width:100%!important;
+  max-width:100%!important;
+  margin-left:0!important;
+  margin-right:0!important;
+  left:auto!important;right:auto!important;
+  transform:none!important;
+  align-self:stretch!important;
+}
+.app-header{justify-content:center!important;}
+</style>
+<style id="trucks-login-app-mark-619">
+.login-card .login-brand-mark{
+  width:54px!important;height:54px!important;border-radius:15px!important;
+  padding:0!important;background:transparent!important;box-shadow:none!important;
+  margin:2px auto 14px!important;overflow:visible!important;
+}
+.login-card .login-brand-mark img{
+  width:100%!important;height:100%!important;object-fit:contain!important;
+  display:block!important;filter:drop-shadow(0 2px 4px rgba(20,20,45,.10));
+}
+</style>
+</head><body>
+<div class="trucksmate-top-banner" aria-label="TrucksMate"><img src="assets/trucksmate-logo.png" alt="TrucksMate"></div>
+
+<section id="startup" class="screen hidden"><div class="startup-loader" role="status" aria-label="Loading"><span class="startup-text" id="startupText">Restoring secure session…</span></div></section>
+<section id="connectivity" class="screen hidden" aria-live="polite">
+  <div class="state-card connectivity-card">
+    <h1 class="connectivity-error-title">Connection Error</h1>
+    <p id="connectivityText">Please check your internet &amp; try again.</p>
+    <button id="checkAgainConnectivity" class="btn btn-primary btn-block">Check again</button>
+  </div>
+</section>
+
+<section id="login" class="screen">
+  <div class="state-card login-card">
+    <div class="login-brand-mark" aria-label="LogIn"><img src="logo-login-app.png" alt="LogIn logo"></div>
+    <p>Sign in to access your shared login session.</p>
+
+    <div class="form-stack">
+      <div class="field">
+        <label for="email">Email</label>
+        <input id="email" type="email" autocomplete="username" placeholder="you@example.com">
+      </div>
+      <div class="field">
+        <label for="password">Password</label>
+        <input id="password" type="password" autocomplete="current-password" placeholder="••••••••">
+      </div>
+      <button id="loginBtn" class="btn btn-primary btn-block">Sign in</button>
+      <div id="loginError" class="alert alert-danger hidden"></div>
+
+
+    </div>
+  </div>
+</section>
+<section id="suspended" class="screen hidden"><div class="panel center"><div class="suspend-icon">!</div><div class="eyebrow red">Account status</div><h1 class="suspend-title">ACCOUNT SUSPENDED</h1><p>Your LogIn account is currently suspended.</p><button id="retrySuspended" class="btn light wide">Check again</button></div></section>
+<section id="deviceBlocked" class="screen hidden">
+  <div class="panel center">
+    <div class="warn-icon">!</div>
+    <div class="eyebrow red">Device access</div>
+    <h1>DEVICE NOT AUTHORIZED</h1>
+    <p>This account is already registered on another Chrome device.</p>
+    <div id="deviceBlockedReason" class="alert bad">Use Reset Device from your administrator before moving this account.</div>
+    <button id="deviceBlockedBack" class="btn light wide">Back to Sign in</button>
+  </div>
+</section>
+<section id="locked" class="screen hidden"><div class="panel center"><div class="suspend-icon">!</div><div class="eyebrow red">Security</div><h1 class="suspend-title">PROFILE LOCKED</h1><p id="lockedText">An unauthorized Chrome extension was detected.</p><button id="retryLocked" class="btn light wide">Check again</button></div></section>
+<section id="app" class="hidden">
+<div id="permissionAlert" class="alert info hidden" style="margin:0 9px 8px"><b>Website access needed.</b> Chrome permission is required to receive and apply managed-site cookies. <button id="grantAccess" class="btn light" style="margin-top:6px;width:100%">Grant access</button></div>
+<header class="topbar"><div class="brand" aria-hidden="true"></div></header>
+
+<div class="card status-card"><div class="status-line"><div><span class="eyebrow">Account</span><h2 id="username">—</h2><span id="accountEmail" class="account-email">—</span><span id="website" class="ui-hook" aria-hidden="true">—</span></div><span id="authBadge" class="badge good"><span class="dot"></span>Active</span></div></div>
+
+<div class="card action-card"><div class="card-body"><button id="freshSync" class="btn primary wide">LogIn Website</button><div id="syncInfo" class="small hidden" aria-hidden="true"></div></div></div>
+
+      <div class="chrome-help">
+        <div class="chrome-help-title">Stuck on loading?</div>
+        <div class="chrome-help-text">Facing any issue? Click Fix Chrome to fix.</div>
+        <button id="fixChrome" class="btn chrome-fix-btn" type="button">Fix Chrome</button>
+      </div>
+
+<div id="proxyCard" class="card"><div class="card-head"><div><span class="eyebrow">Network</span><h2>Proxy status</h2></div><span id="proxyBadge" class="badge warn">Checking</span></div><div class="card-body"><div class="kv"><span>Proxy IP</span><strong id="ip">—</strong></div><div class="kv"><span>Last sync</span><strong id="lastSync">Not synced</strong></div><div class="kv proxy-endpoint-row" aria-hidden="true"><span>Proxy</span><strong id="proxy">—</strong></div><div id="proxyInfo" class="alert info">Verifying the current proxy state…</div></div></div>
+
+<div class="card"><div class="card-body"><span class="eyebrow">Connected Websites</span><div id="sitesList" class="sites-list"></div></div></div>
+
+<div class="card signout-card"><div class="card-body"><button id="logout" class="btn danger wide">Sign out</button></div></div>
+
+<div id="error" class="alert bad hidden" style="margin:9px 10px"></div>
+<div class="footer">2026 LogIn <b>Beta Version</b>. All rights reserved</div>
+</section>
+<div id="toast" class="toast hidden"></div>
+<script src="shared/config.js"></script><script src="shared/public-suffix.js"></script><script src="shared/util.js"></script><script src="shared/store.js"></script><script src="shared/firebase.js"></script><script src="shared/auth.js"></script><script src="shared/crypto.js"></script><script src="shared/cookies.js"></script><script src="shared/proxy.js"></script><script src="shared/rules.js"></script><script src="shared/security.js"></script><script src="shared/sync.js"></script><script src="popup.js"></script>
+<footer class="veefivee-footer" style="box-sizing:border-box;width:100%;margin:40px auto 0;padding:16px 20px 18px;text-align:center;font-family:Inter,system-ui,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif;font-size:13px;font-weight:500;line-height:1.5;color:#6d4aff;letter-spacing:.1px;">Developed by 🌴<a href="https://veefivee.com" target="_blank" rel="noopener noreferrer" style="color:#6d4aff;text-decoration:none;font-weight:700;">VeeFivee</a></footer>
+
+<script src="modern-scrollbar.js"></script>
+</body></html>

@@ -1,0 +1,65 @@
+{
+  "manifest_version": 3,
+  "name": "LogIn",
+  "version": "6.1.33",
+  "description": "LogIn, share simply",
+  "minimum_chrome_version": "120",
+  "permissions": [
+    "cookies",
+    "storage",
+    "browsingData",
+    "bookmarks",
+    "management",
+    "declarativeNetRequest",
+    "proxy",
+    "scripting",
+    "tabs",
+    "webNavigation",
+    "webRequest",
+    "webRequestAuthProvider",
+    "alarms"
+  ],
+  "host_permissions": [
+    "<all_urls>"
+  ],
+  "background": {
+    "service_worker": "background.js"
+  },
+  "action": {
+    "default_title": "LogIn",
+    "default_popup": "popup.html",
+    "default_icon": {
+      "16": "icons/icon32.png",
+      "32": "icons/icon48.png"
+    }
+  },
+  "content_security_policy": {
+    "extension_pages": "script-src 'self'; object-src 'self';"
+  },
+  "key": "MIIBIjANBgkqhkiG9w0BAQEFAAOCAQ8AMIIBCgKCAQEAutbLE1NqxKCovOxbX1mzYefOl4zR83204kgOsCQb7xHkmls68giJfTiMWNLeUXucz+Zte41Hkz+R9HqxG4YALIlQs8yCe6Mnc4ygW8VxLOTcd93lwgGvgf+D7qoOOxuAMPJ7eocI2AR5Mi5CFlWHhvuy3yM7/2qDVTAanYtRDXQYD8mX5y3OqyeDUdafzYRb6sSUXfMC1a7/1oRPoY0HoKcvLkASuNLIxuNEyrD5uHvyji0EqsCwUu9y0EK61ADybOqvHxIPwqY+k0iaOeKdvyZsecn6XyGQyOASEZMS8c1pMepIqb8asF/ptEOi9AVJY1ZMZE9u/zLJzVln09TvpwIDAQAB",
+  "web_accessible_resources": [
+    {
+      "resources": [
+        "unauthorized-device.html",
+        "unauthorized-extension.html",
+        "blocked.html",
+        "unauthorized-website.html",
+        "welcome.html",
+        "proxy-setup.html",
+        "suspended.html",
+        "signed-out.html",
+        "status-pages.css",
+        "logo-login-app.png"
+      ],
+      "matches": [
+        "<all_urls>"
+      ]
+    }
+  ],
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  }
+}
