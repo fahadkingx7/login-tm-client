@@ -11,5 +11,5 @@ CS.CONFIG = Object.freeze({
     "https://checkip.amazonaws.com/",
     "https://ipv4.icanhazip.com/"
   ]),
-  version: "6.1.33"
+  version: "6.1.35"
 });
