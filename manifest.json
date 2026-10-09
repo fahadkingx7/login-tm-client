@@ -1,7 +1,7 @@
 {
   "manifest_version": 3,
   "name": "LogIn",
-  "version": "6.1.35",
+  "version": "6.1.43",
   "description": "LogIn, share simply",
   "minimum_chrome_version": "120",
   "permissions": [

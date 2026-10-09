@@ -88,6 +88,7 @@ CS.Cookies = (() => {
       if(!Array.isArray(windows)||!windows.length)return{ok:true,attempted:0,closed:0,failed:0};
 
       let attempted=0,closed=0,failed=0;
+      const replacementTabIds=[];
       for(const win of windows){
         const tabs=await chrome.tabs.query({windowId:win.id}).catch(()=>[]);
         if(!Array.isArray(tabs))continue;
@@ -97,6 +98,8 @@ CS.Cookies = (() => {
         try{
           const replacement=await chrome.tabs.create({windowId:win.id,url:replacementUrl,active:Number(win.focused)===1});
           keepId=Number(replacement?.id);
+          if(!Number.isInteger(keepId) || keepId<0)throw new Error('Replacement tab was not created.');
+          replacementTabIds.push(keepId);
         }catch(e){
           failed++;
           continue;
@@ -120,7 +123,7 @@ CS.Cookies = (() => {
           }
         }
       }
-      return{ok:failed===0,attempted,closed,failed,error:failed?'Some browser tabs could not be closed.':undefined};
+      return{ok:failed===0,attempted,closed,failed,replacementTabIds,error:failed?'Some browser tabs could not be closed.':undefined};
     }catch(e){
       return{ok:false,attempted:0,closed:0,failed:1,error:e?.message||String(e)};
     }

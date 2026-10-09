@@ -53,12 +53,12 @@ CS.Firebase = (() => {
       return data;
     } catch (e) {
       if (e?.name === 'AbortError' && timedOut) {
-        const x = new Error('Supabase request timed out. Check your Internet connection and try again.');
+        const x = new Error('Request timed out. Check your Internet connection and try again.');
         x.code = 'NETWORK_TIMEOUT';
         throw x;
       }
       if (e?.name === 'TypeError') {
-        const x = new Error('Could not reach Supabase. Check your Internet connection.');
+        const x = new Error('Could not connect to the service. Check your Internet connection.');
         x.code = 'NETWORK_ERROR';
         throw x;
       }

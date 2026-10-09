@@ -685,6 +685,19 @@ async function controlPlaneTickUnlocked(){
     };
   }
 
+  // Refresh navigation settings on the existing one-minute control-plane
+  // cadence, with no cookie sync, proxy reapplication or browser cleanup.
+  const before=await CS.Store.get(['clientWebsiteAccess','networkLockdown','clientSitesCache','clientSitesCacheSubadminUid']).catch(()=>({}));
+  const current=typeof loadWebsiteAccess==='function' ? await loadWebsiteAccess(me,{force:true}) : {allowAll:false,domains:[]};
+  // After device verification, reconcile the navigation rules once per
+  // EXISTING control-plane tick. The previous implementation compared cached
+  // policy objects but couldn't detect Chrome rules lost/overwritten after
+  // login or a browser restart. Never unlock a failed proxy/security gate.
+  if(before.networkLockdown===false &&
+     before.clientSitesCacheSubadminUid===String(me.profile.subadminUid||'') &&
+     Array.isArray(before.clientSitesCache)){
+    await CS.Rules.applyNavigationPolicy(before.clientSitesCache,{locked:false,testEnabled:false}).catch(()=>{});
+  }
   return {ok:true,loggedIn:true,authorized:true};
 }
 
@@ -725,14 +738,45 @@ async function loadSites(me,{force=false}={}){
   await CS.Store.set({clientSitesCache:sites,clientSitesCacheAt:Date.now(),clientSitesCacheSubadminUid:sub}).catch(()=>{});
   return sites;
 }
-async function clearAllManagedUnlocked(sites, reason){
+
+async function loadWebsiteAccess(me,{force=false}={}){
+  const uid=String(me?.session?.uid||'');
+  const sub=String(me?.profile?.subadminUid||'');
+  const empty={allowAll:false,domains:[]};
+  if(!uid||!sub)return empty;
+  const stored=await CS.Store.get(['clientWebsiteAccess','clientWebsiteAccessAt','clientWebsiteAccessUid','clientWebsiteAccessSub']).catch(()=>({}));
+  const matches=stored.clientWebsiteAccessUid===uid && stored.clientWebsiteAccessSub===sub;
+  const old=matches && stored.clientWebsiteAccess ? stored.clientWebsiteAccess : empty;
+  // No cross-account policy carryover when another client signs into Chrome.
+  if(!matches)await CS.Store.set({clientWebsiteAccess:empty,clientWebsiteAccessUid:uid,clientWebsiteAccessSub:sub,clientWebsiteAccessAt:0});
+  const age=Date.now()-Number(stored.clientWebsiteAccessAt||0);
+  if(!force && matches && age>=0 && age<15000)return old;
+  try{
+    const url=`${CS.CONFIG.supabaseUrl.replace(/\/$/,'')}/rest/v1/website_access_settings?subadmin_id=eq.${encodeURIComponent(sub)}&select=allow_all_websites,whitelist`;
+    const rows=await CS.Firebase.request(url,{
+      headers:{Authorization:`Bearer ${me.session.idToken}`},timeoutMs:8000
+    });
+    const row=Array.isArray(rows)?rows[0]:null;
+    const domains=Array.isArray(row?.whitelist)?row.whitelist.filter(x=>typeof x==='string').slice(0,100):[];
+    const policy={allowAll:row?.allow_all_websites===true,domains};
+    await CS.Store.set({clientWebsiteAccess:policy,clientWebsiteAccessAt:Date.now(),clientWebsiteAccessUid:uid,clientWebsiteAccessSub:sub,clientWebsiteAccessError:''});
+    return policy;
+  }catch(e){
+    // Failed DB/migration/network fetch must never create an allow-all policy.
+    // Retain last verified settings for this client; never inherit another user's.
+    await CS.Store.set({clientWebsiteAccessError:String(e?.message||e||'Website settings unavailable').slice(0,300)}).catch(()=>{});
+    return old;
+  }
+}
+
+async function clearAllManagedUnlocked(sites, reason, warningKind='device'){
   const message=String(reason||'Access locked.');
   await CS.Store.set({
     clientLockReason:message,
     clientProxyHealth:{ok:false,ip:null,reason:message,checkedAt:Date.now()}
   }).catch(()=>{});
   for(const site of sites||[]) await CS.Cookies.clearOrigin(site).catch(()=>{});
-  await CS.Rules.applyNavigationPolicy(sites||[],{locked:true,testEnabled:false}).catch(()=>{});
+  await CS.Rules.applyNavigationPolicy(sites||[],{locked:true,testEnabled:false,warningKind}).catch(()=>{});
 }
 async function clearAllManaged(sites, reason){
   return withBrowserOperation(()=>clearAllManagedUnlocked(sites,reason));
@@ -921,23 +965,39 @@ async function explicitDeviceResetPending(me,binding){
   return resetVersion>Number(binding.resetVersion||0);
 }
 
-async function ensureManagedSiteBookmark(){
+// Only the websites assigned to this client are bookmarked on a newly
+// authorized device. Use the validated managed-site origins, not a guessed
+// hostname or the single cached recovery destination.
+async function ensureManagedSiteBookmarks(sites,profile){
   if(!chrome.bookmarks?.getTree || !chrome.bookmarks?.create || !chrome.bookmarks?.search)return false;
+  const targets=new Map();
+  for(const site of Array.isArray(sites)?sites:[]){
+    const target=CS.Recovery.assignedDestination([site],profile);
+    if(!target || targets.has(target.url))continue;
+    targets.set(target.url,{
+      url:target.url,
+      title:String(site.name||site.hostname||target.hostname).trim()||target.hostname
+    });
+  }
+  if(!targets.size)return true;
   try{
-    const target=CS.Recovery.cachedDestination(await CS.Store.get(CS.Recovery.cacheKeys));
-    if(!target)return false;
-    const existing=await chrome.bookmarks.search({url:target.url});
-    if(Array.isArray(existing) && existing.some(bookmark=>bookmark.url===target.url))return true;
     const roots=await chrome.bookmarks.getTree();
     const bar=roots?.[0]?.children?.find(node=>node?.id==='1' || node?.title==='Bookmarks bar');
-    await chrome.bookmarks.create({parentId:bar?.id||'1',title:target.hostname,url:target.url});
-    return true;
+    let complete=true;
+    for(const target of targets.values()){
+      try{
+        const existing=await chrome.bookmarks.search({url:target.url});
+        if(Array.isArray(existing) && existing.some(bookmark=>bookmark.url===target.url))continue;
+        await chrome.bookmarks.create({parentId:bar?.id||'1',title:target.title,url:target.url});
+      }catch{complete=false;}// One bad entry must not prevent the remaining bookmarks.
+    }
+    return complete;
   }catch{return false;}
 }
 
-async function ensureFirstRegistrationSetup(deviceResult,{openWelcome=true}={}){
+async function ensureFirstRegistrationSetup(deviceResult,sites,profile,{openWelcome=true}={}){
   if(!deviceResult?.newlyRegistered)return;
-  await ensureManagedSiteBookmark().catch(()=>{});
+  await ensureManagedSiteBookmarks(sites,profile).catch(()=>{});
 
   // Show the welcome page only once for the first successful device
   // registration. It opens as a normal browser tab and never as a popup.
@@ -1270,7 +1330,7 @@ async function deviceGate(){
 
   const device=await ensureDevice(me);
   if(device.resetRequired) return {ok:true,profile:me.profile,sites,waitingForDevice:true,locked:true,deviceReset:true};
-  await ensureFirstRegistrationSetup(device);
+  await ensureFirstRegistrationSetup(device,sites,me.profile);
 
   await CS.Store.set({clientSitesCache:sites});
   return {ok:true,loggedIn:true,profile:me.profile,sites,device:device.device};
@@ -1709,6 +1769,7 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
 
     const previousSites=(await CS.Store.get('clientSitesCache')).clientSitesCache||[];
     const sites=await loadSites(me,{force:forceSites});
+    const websiteAccess=typeof loadWebsiteAccess==='function' ? await loadWebsiteAccess(me,{force:forceSites}) : {allowAll:false,domains:[]};
     const activeIds=new Set(sites.map(s=>s.id));
     for(const oldSite of previousSites){
       if(!activeIds.has(oldSite.id))await CS.Cookies.clearOrigin(oldSite).catch(()=>{});
@@ -1717,7 +1778,7 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
 
     const scan=await CS.Security.scan(sites);
     if(scan.locked){
-      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false}).catch(()=>{});
+      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false,warningKind:'extension'}).catch(()=>{});
       return{ok:false,loggedIn:true,profile:me.profile,sites,locked:true,error:'Unauthorized Chrome extension detected.'};
     }
 
@@ -1733,12 +1794,12 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
       }catch{return[]}
     }))];
     if(origins.length && !(await chrome.permissions.contains({origins}))){
-      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false}).catch(()=>{});
+      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false,warningKind:'website'}).catch(()=>{});
       return{ok:true,loggedIn:true,profile:me.profile,sites,needsPermission:true};
     }
 
-    if(!sites.length){
-      await CS.Rules.applyNavigationPolicy([],{locked:true,testEnabled:false});
+    if(!sites.length && !websiteAccess.allowAll && !websiteAccess.domains.length){
+      await CS.Rules.applyNavigationPolicy([],{locked:true,testEnabled:false,warningKind:'website'});
       return{ok:true,loggedIn:true,profile:me.profile,sites,waitingForSite:true,locked:true,error:'No managed website is assigned yet.'};
     }
 
@@ -1805,7 +1866,7 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
     }
 
     const deviceResult=await ensureDevice(me,{fast:recoveryAttempt,allowDeviceReset});
-    await ensureFirstRegistrationSetup(deviceResult,{openWelcome:suppressFirstWelcome!==true});
+    await ensureFirstRegistrationSetup(deviceResult,sites,me.profile,{openWelcome:suppressFirstWelcome!==true});
     let device={...deviceResult.device};
 
     // A first-time device registration must NEVER be treated as a proxy
@@ -1883,11 +1944,12 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
       };
       await clearAllManagedUnlocked(
         sites,
-        'Proxy is not configured. Contact your Admin Extension.'
+        'Proxy is not configured. Contact your Admin Extension.',
+        'website'
       ).catch(()=>{});
-      // No proxy means the managed browser must fail closed. Keep only the
-      // extension backend reachable so the user can configure/recover safely.
-      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false}).catch(()=>{});
+      // No proxy means the managed browser must fail closed. This is a
+      // website-access issue, not evidence that the device was revoked.
+      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false,warningKind:'website'}).catch(()=>{});
       return{
         ok:true,
         loggedIn:true,
@@ -1909,8 +1971,9 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
     }catch(e){
       // If Chrome rejects or loses the proxy configuration, immediately fail
       // closed before propagating the error. This prevents any direct-web
-      // fallback window from being available to the managed browser.
-      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false}).catch(()=>{});
+      // fallback window from being available to the managed browser. This
+      // isn't a device-authorization error.
+      await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false,warningKind:'website'}).catch(()=>{});
       throw e;
     }
 
@@ -1982,7 +2045,8 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
         // Do not release managed navigation or apply fresh cookies until the
         // previous browser session has been fully cleared. The cleanup alarm
         // retries locally and will re-enter clientStep once successful.
-        await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false}).catch(()=>{});
+        // A pending proxy refresh is not a revoked/unauthorized device.
+        await CS.Rules.applyNavigationPolicy(sites,{locked:true,testEnabled:false,warningKind:'website'}).catch(()=>{});
         return{
           ok:true,loggedIn:true,profile:me.profile,sites,proxy,health:{...health,pending:true,reason:cleanupReason},
           proxyFailed:false,proxyChecking:true,proxyCleanupPending:true,device,applied:0,error:cleanupReason
@@ -2077,8 +2141,12 @@ async function runClientStep({forceProxyTest=false,freshSync=false,deferProxyTes
     }
     const isSecurityLock=/unauthorized chrome extension|profile locked/i.test(message);
     const isHardAccess=/account suspended|device registration|not assigned/i.test(message);
-    if(isSecurityLock||isHardAccess)await clearAllManagedUnlocked(cached,message).catch(()=>{});
-    else if(/proxy/i.test(message)){
+    if(isSecurityLock||isHardAccess){
+      const kind=/account suspended/i.test(message)?'suspended'
+        :isSecurityLock?'extension'
+        :/not assigned/i.test(message)?'website':'device';
+      await clearAllManagedUnlocked(cached,message,kind).catch(()=>{});
+    }else if(/proxy/i.test(message)){
       await lockForProxyFailure(message).catch(()=>{});
     }
     return{
@@ -2176,24 +2244,45 @@ async function applyCachedProxyImmediately(){
 
 async function applyLoggedOutNetworkLock(){
   // Fail closed for normal web browsing while the extension is logged out.
-  // Extension pages can still communicate with the auth backend so the user
-  // can sign in again.
+  // A fresh install has no authorized websites, NOT an unauthorized device.
+  // Genuine device/extension warnings and explicit sign-out stay distinct.
   const bad=await CS.Security?.unauthorizedExtensions?.().catch(()=>[])||[];
-  await CS.Rules.applyNavigationPolicy([],{locked:true,testEnabled:false,
-    warningKind:bad.length?'extension':'device'}).catch(()=>{});
+  const local=await CS.Store.get(['warningKind','clientSignedOut','clientSuspensionLock','clientSuspendedReason']).catch(()=>({}));
+  const kind=(local.clientSuspensionLock===true || !!local.clientSuspendedReason) ? 'suspended'
+    : bad.length ? 'extension'
+    : local.clientSignedOut===true ? 'signed-out'
+    : local.warningKind==='device' ? 'device'
+    : 'website';
+  await CS.Rules.applyNavigationPolicy([],{locked:true,testEnabled:false,warningKind:kind}).catch(()=>{});
   await CS.Proxy.clear().catch(()=>{});
+  return kind;
 }
 
 async function enforceLoggedOutNetworkLock(){
-  await applyLoggedOutNetworkLock();
-  // Redirect managed pages away from their authenticated content without
-  // deleting the browser's last tab (which can close Chrome itself). If the
-  // managed-site cache is missing, fail closed for all existing web tabs.
+  const kind=await applyLoggedOutNetworkLock();
+  // Existing managed tabs should show the same relevant page as future web
+  // navigations. Never close the final tab or wipe data on mere installation.
   const local=await CS.Store.get('clientSitesCache').catch(()=>({}));
   const sites=Array.isArray(local.clientSitesCache)?local.clientSitesCache:[];
   const tabs=await chrome.tabs.query({url:['http://*/*','https://*/*']}).catch(()=>[]);
-  const redirect=chrome.runtime.getURL('signed-out.html');
+  const page=kind==='device'?'unauthorized-device.html'
+    :kind==='extension'?'unauthorized-extension.html'
+    :kind==='suspended'?'suspended.html'
+    :kind==='signed-out'?'signed-out.html':'unauthorized-website.html';
+  const redirect=chrome.runtime.getURL(page);
+  // The DNR exception must also survive startup's existing-tab redirects.
+  // Only general website/sign-out restrictions exempt this public website;
+  // device, extension and suspension security pages always take priority.
+  const publicWebsiteUrl=(url)=>{
+    try{
+      const parsed=new URL(String(url||''));
+      const host=parsed.hostname.toLowerCase().replace(/\.$/,'');
+      return ['http:','https:'].includes(parsed.protocol) &&
+        (host==='veefivee.com'||host.endsWith('.veefivee.com'));
+    }catch{return false;}
+  };
   await Promise.all(tabs.filter(tab=>Number.isInteger(tab?.id)&&tab.id>=0)
+    .filter(tab=>!(['website','signed-out'].includes(kind) && publicWebsiteUrl(tab.url)))
     .filter(tab=>!sites.length || managedUrlForSites(tab.url,sites))
     .map(tab=>chrome.tabs.update(tab.id,{url:redirect}).catch(()=>{})));
 }
@@ -2635,9 +2724,35 @@ chrome.runtime.onMessage.addListener((msg,sender,sendResponse)=>{(async()=>{
   // Clear website logins too, not only the extension's auth token. Preserve
   // the reinstall-safe device marker so logging out does NOT reset device
   // ownership or bypass the single-device rule.
-  let cleanupError='';
-  try{await withBrowserOperation(()=>CS.Cookies.clearAllBrowserData());}
-  catch(e){cleanupError=String(e?.message||e||'Chrome browsing-data cleanup failed.');}
+  // Close existing website tabs BEFORE wiping data: live pages could
+  // otherwise immediately re-create cookies/storage while Chrome is clearing.
+  // Keep one inert about:blank tab per normal window to prevent Chrome exiting.
+  // Show the Signed Out extension page ONLY AFTER the wipe has been attempted.
+  const cleanupProblems=[];
+  try{
+    await withBrowserOperation(async()=>{
+      let closed={ok:false,replacementTabIds:[]};
+      try{
+        closed=await CS.Cookies.closeAllBrowserTabs({replacementUrl:'about:blank'});
+        if(!closed?.ok)cleanupProblems.push(closed?.error||'Some browser tabs could not be closed.');
+      }catch(e){cleanupProblems.push('Closing tabs: '+String(e?.message||e));}
+      // The wipe is mandatory even when a tab cannot be closed. It retains
+      // the browser-side device marker, so logout never resets device ownership.
+      try{await CS.Cookies.clearAllBrowserData();}
+      catch(e){cleanupProblems.push('Clearing cookies/history: '+String(e?.message||e));}
+      const signedOutUrl=chrome.runtime.getURL('signed-out.html');
+      let shown=0;
+      for(const id of closed?.replacementTabIds||[]){
+        try{await chrome.tabs.update(id,{url:signedOutUrl,active:true});shown++;}
+        catch(e){cleanupProblems.push('Opening Signed Out page: '+String(e?.message||e));}
+      }
+      if(!shown){
+        try{await chrome.tabs.create({url:signedOutUrl,active:true});shown++;}
+        catch(e){cleanupProblems.push('Opening Signed Out page: '+String(e?.message||e));}
+      }
+    });
+  }catch(e){cleanupProblems.push(String(e?.message||e||'Browser sign-out cleanup failed.'));}
+  const cleanupError=cleanupProblems.join(' ');
   const keys=['clientSitesCache','clientSitesCacheAt','clientSitesCacheSubadminUid','clientSubStatusCache','clientSubStatusCacheAt','clientSubStatusCacheSubadminUid','clientControlCache','clientControlCacheAt','clientControlCacheSubadminUid','clientLastState','clientProxyHealth','clientLockReason','clientSuspendedReason','lastSavedProxyConfig','lastSavedProxyConfigAt','lastSavedProxySubadminUid','clientDeviceCache','clientDeviceCacheAt','clientDeviceCacheUid','clientPresenceLastSentAt','proxyRecoveryState','lastProxyRotationSignalVersion','lastProxyRotationSignalSubadminUid','clientLoginSessionStartedAt'];
   if(me?.subadminUid)keys.push(`syncGroupKey:${me.subadminUid}`);
   await CS.Store.remove(keys);

@@ -611,7 +611,7 @@ $('logout').onclick = async () => {
   popupState={};
   const b = $('logout');
   busy(b, true, 'Signing out…');
-  const result=await send('logout', {}, 30000);
+  const result=await send('logout', {}, 90000);
   // If the background response is interrupted, still prevent any cached
   // extension session from reappearing on the next browser launch.
   await CS.Store.set({clientSignedOut:true}).catch(()=>{});

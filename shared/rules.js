@@ -3,6 +3,8 @@ CS.Rules = (() => {
   const SUPABASE_HOSTS=['thdxsonrjazeoadhidbx.supabase.co'];
   const HTTP_TYPES=['main_frame','sub_frame','xmlhttprequest','script','image','stylesheet','font','media','object','other','ping','websocket'];
   const MAIN=['main_frame'];
+  // Public company website: independent of managed-site assignments and cookie sync.
+  const PUBLIC_ALWAYS_ALLOWED_HOST='veefivee.com';
   let updateQueue = Promise.resolve();
   async function applyDynamicRules(resolvePolicy){
     const run = async () => {
@@ -29,6 +31,18 @@ CS.Rules = (() => {
   function allowHost(id,host,types=MAIN){
     return{id,priority:4000,action:{type:'allow'},condition:{regexFilter:hostRegex(host),resourceTypes:types}};
   }
+  function publicWebsiteAllow(){
+    // Higher than blockedPatterns and every generic website redirect.
+    // The rule is omitted for real device, extension or suspension locks.
+    // Allow the site's entire frame (including its third-party images, fonts,
+    // scripts and stylesheet requests), while keeping every other tab locked.
+    // This is a DNR frame permission, NOT a Chrome proxy/direct-mode exception.
+    return [
+      {...allowHost(40,PUBLIC_ALWAYS_ALLOWED_HOST,HTTP_TYPES),priority:6000},
+      {...allowHost(42,PUBLIC_ALWAYS_ALLOWED_HOST,MAIN),priority:6100,
+        action:{type:'allowAllRequests'}}
+    ];
+  }
   function blockAllWeb(){return{id:2,priority:1,action:{type:'block'},condition:{regexFilter:'^https?://',resourceTypes:HTTP_TYPES}};}
   function blockUnauthorizedWebsites(){
     return{
@@ -42,7 +56,7 @@ CS.Rules = (() => {
     const kind=String(warningKind||'device').toLowerCase();
     const page=kind==='extension'
       ? 'unauthorized-extension.html'
-      : (kind==='suspended' ? 'suspended.html' : kind==='signed-out' ? 'signed-out.html' : 'unauthorized-device.html');
+      : (kind==='suspended' ? 'suspended.html' : kind==='signed-out' ? 'signed-out.html' : kind==='website' ? 'unauthorized-website.html' : 'unauthorized-device.html');
     return{
       id:1,
       priority:3000,
@@ -62,6 +76,22 @@ CS.Rules = (() => {
   function siteAllows(sites){
     return uniqueSites(sites).map(s=>siteScopeHostname(s.hostname)).filter(Boolean).map((host,i)=>allowHost(100+i,host,MAIN));
   }
+  function extraAllowRules(policy){
+    const allowAll=policy && policy.allowAll===true;
+    if(allowAll){
+      // Only top-level website navigation; Chrome's existing proxy is unchanged.
+      return [{id:41,priority:3000,action:{type:'allow'},
+        condition:{regexFilter:'^https?://',resourceTypes:MAIN}}];
+    }
+    const domains=Array.isArray(policy?.domains)?policy.domains:[];
+    const seen=new Set();
+    return domains.filter(h=>{
+      const host=String(h||'').trim().toLowerCase();
+      if(!/^[a-z0-9](?:[a-z0-9.-]*[a-z0-9])?$/.test(host) ||
+         !host.includes('.') || host.length>253 || seen.has(host))return false;
+      seen.add(host);return true;
+    }).slice(0,100).map((host,i)=>({...allowHost(500+i,host),priority:4500}));
+  }
   function blockedPatterns(sites){
     const rules=[];let id=2000;
     for(const site of uniqueSites(sites)) for(const pattern of (site.blockedPatterns||[]).slice(0,500)){
@@ -80,7 +110,7 @@ CS.Rules = (() => {
       // Check persistent status at *execution* time rather than at enqueue
       // time; otherwise an older proxy health request can unlock the browser
       // after an account was suspended while that request was waiting.
-      const local=await CS.Store.get(['clientSuspensionLock','clientSuspendedReason','clientSignedOut']);
+      const local=await CS.Store.get(['clientSuspensionLock','clientSuspendedReason','clientSignedOut','clientWebsiteAccess']);
       const suspended=local.clientSuspensionLock===true || !!local.clientSuspendedReason;
       // An old proxy health check must never re-authorize web access after
       // explicit sign-out, even if it finished after the logout request.
@@ -90,7 +120,16 @@ CS.Rules = (() => {
         ? [blockSecurityNavigations(kind),blockAllWeb(),...infra()]
         : [blockUnauthorizedWebsites(),...infra()];
       if(!suspended && testEnabled)rules.push(...ipTestRules());
-      if(!effectiveLocked)rules.push(...siteAllows(sites),...blockedPatterns(sites));
+      // A public corporate site is not a synced login. Allow it even before
+      // sign-in or after sign-out, but never defeat confirmed security locks.
+      const securityWarning=locked===true && ['device','extension','suspended'].includes(warningKind);
+      if(!suspended && !securityWarning &&
+         (!effectiveLocked || kind==='website' || kind==='signed-out')){
+        rules.push(...publicWebsiteAllow());
+      }
+      if(!effectiveLocked){
+        rules.push(...siteAllows(sites),...extraAllowRules(local.clientWebsiteAccess),...blockedPatterns(sites));
+      }
       return {rules,locked:effectiveLocked};
     });
   }
